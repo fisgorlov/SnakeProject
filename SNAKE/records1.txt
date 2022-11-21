@@ -1,6 +1,6 @@
+/24/Gleb/
 /20/Player1/
 /20/Matvei/
-/11/Gleb/
 /10/Player2/
 /0/Player3/
 /0/Player4/

@@ -10,9 +10,12 @@ FRAME_WORK = (0, 255, 204)
 BLUE = (204, 255, 255)
 WHITE = (255, 255, 255)
 RED = (224, 0, 0)
+BLACK = (0, 0, 0)
+DUKE_BLUE = (0, 0, 153)
 STONE_COLOR = (128, 128, 128)
 HEADER_COLOR = (0, 204, 153)
 SNAKE_COLOR = (0, 102, 0)
+EGG_BLUE = (0,230,191)
 BAD_SNAKE_COLOR = (17, 0, 51)
 COUNT_BLOCKS = 20
 COUNT_LINES = 30
@@ -126,6 +129,74 @@ class Records:
         pass
 
 
+class PlayingField:
+    @staticmethod
+    def drawing(total, total_record, header_color, header_margin, colors_of_squares):
+        screen.fill(FRAME_WORK)
+        pygame.draw.rect(screen, header_color, [0, 0, size[0], header_margin])
+
+        text_total = courier.render(f"Total: {total}", False, WHITE)
+        text_record = courier.render(f"Record: {total_record}", False, WHITE)
+        screen.blit(text_total, (SIZE_BLOCK, SIZE_BLOCK))
+        screen.blit(text_record, (SIZE_BLOCK + 210, SIZE_BLOCK))
+        for line in range(COUNT_BLOCKS):
+            for column in range(COUNT_BLOCKS):
+                if (line + column) % 2 == 0:
+                    color = colors_of_squares[0]
+                else:
+                    color = colors_of_squares[1]
+                draw_block(color, column, line)
+
+    @staticmethod
+    def doing_events(d_col, d_line):
+        delta_column = d_col
+        delta_line = d_line
+        movement = dict(up=(-1, 0), down=(1, 0), left=(0, -1), right=(0, 1))
+        for event in pygame.event.get():  # doing all events
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if (event.key == pygame.K_w or event.key == pygame.K_UP) and delta_column != 0:
+                    delta_line, delta_column = movement['up']
+                elif (event.key == pygame.K_s or event.key == pygame.K_DOWN) and delta_column != 0:
+                    delta_line, delta_column = movement['down']
+                elif (event.key == pygame.K_a or event.key == pygame.K_LEFT) and delta_line != 0:
+                    delta_line, delta_column = movement['left']
+                elif (event.key == pygame.K_d or event.key == pygame.K_RIGHT) and delta_line != 0:
+                    delta_line, delta_column = movement['right']
+        return delta_column, delta_line
+
+    @staticmethod
+    def apply_everything_plus_time(speed):
+        pygame.display.flip()  # we apply everything that we have drawn on the screen
+        timer.tick(4 + speed)
+
+
+class DrawingSnake:
+
+    def __init__(self, level_records):
+        x0 = random.randint(0, COUNT_BLOCKS - 5)
+        y0 = random.randint(0, COUNT_BLOCKS - 1)
+
+        self.blocks = [SnakeBlock(x0, y0), SnakeBlock(x0 + 1, y0), SnakeBlock(x0 + 2, y0)]  # a head is last
+        self.delta_column = 1
+        self.delta_line = 0
+        self.speed = 0
+        self.total = 0
+        self.records = Records(level_records)
+        self.total_record = self.records.of_the_player()
+        self.head = self.blocks[-1]
+
+    def drawing(self, snake_color):
+        for block in self.blocks:
+            draw_block(snake_color, block.x, block.y)
+
+    def movement(self, new_head):
+        self.blocks.append(new_head)
+        self.blocks.pop(0)
+
+
 class SnakeLevels:
 
     @staticmethod
@@ -137,80 +208,39 @@ class SnakeLevels:
             x = random.randint(0, COUNT_BLOCKS - 1)
             y = random.randint(0, COUNT_BLOCKS - 1)
             empty_block = SnakeBlock(x, y)
-            while empty_block in snake_blocks:
+            while empty_block in snake.blocks:
                 empty_block.x = random.randint(0, COUNT_BLOCKS - 1)
                 empty_block.y = random.randint(0, COUNT_BLOCKS - 1)
             return empty_block
 
-        x0 = random.randint(0, COUNT_BLOCKS - 5)
-        y0 = random.randint(0, COUNT_BLOCKS - 1)
-
-        snake_blocks = [SnakeBlock(x0, y0), SnakeBlock(x0 + 1, y0), SnakeBlock(x0 + 2, y0)]  # a head is last
+        snake = DrawingSnake("records1.txt")
         apple = get_empty_random_block()
-        stone = get_empty_random_block()
-        d_line = 0
-        d_col = 1
-        speed = 0
-        total = 0
-        records = Records("records1.txt")
-        total_record = records.of_the_player()
+
         while True:
-            for event in pygame.event.get():  # doing all events
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                elif event.type == pygame.KEYDOWN:
-                    if (event.key == pygame.K_w or event.key == pygame.K_UP) and d_col != 0:
-                        d_line = -1
-                        d_col = 0
-                    elif (event.key == pygame.K_s or event.key == pygame.K_DOWN) and d_col != 0:
-                        d_line = 1
-                        d_col = 0
-                    elif (event.key == pygame.K_a or event.key == pygame.K_LEFT) and d_line != 0:
-                        d_line = 0
-                        d_col = -1
-                    elif (event.key == pygame.K_d or event.key == pygame.K_RIGHT) and d_line != 0:
-                        d_line = 0
-                        d_col = 1
+            PlayingField.drawing(snake.total, snake.total_record, DUKE_BLUE, HEADER_MARGIN, (BLUE, EGG_BLUE))
+            snake.delta_column, snake.delta_line = PlayingField.doing_events(snake.delta_column, snake.delta_line)
 
-            screen.fill(FRAME_WORK)
-            pygame.draw.rect(screen, HEADER_COLOR, [0, 0, size[0], HEADER_MARGIN])
-
-            text_total = courier.render(f"Total: {total}", False, WHITE)
-            text_record = courier.render(f"Record: {total_record}", False, WHITE)
-            screen.blit(text_total, (SIZE_BLOCK, SIZE_BLOCK))
-            screen.blit(text_record, (SIZE_BLOCK + 210, SIZE_BLOCK))
-            for line in range(COUNT_BLOCKS):
-                for column in range(COUNT_BLOCKS):
-                    if (line + column) % 2 == 0:
-                        color = WHITE
-                    else:
-                        color = BLUE
-                    draw_block(color, column, line)
-
-            head = snake_blocks[-1]
-            if not head.is_inside():
+            snake.head = snake.blocks[-1]
+            # head = snake_blocks[-1]
+            if not snake.head.is_inside():
                 break
 
             draw_block(RED, apple.x, apple.y)
-            for block in snake_blocks:
-                draw_block(SNAKE_COLOR, block.x, block.y)
-            if apple == head:
-                total += 1
-                total_record = records.update_of_the_player(total, total_record)
-                speed = total // 2
-                snake_blocks.append(apple)
+            snake.drawing(SNAKE_COLOR)
+            if apple == snake.head:
+                snake.total += 1
+                snake.total_record = snake.records.update_of_the_player(snake.total, snake.total_record)
+                snake.speed = snake.total // 2
+                snake.blocks.append(apple)
                 apple = get_empty_random_block()
-            new_head = SnakeBlock(head.x + d_col, head.y + d_line)
-            if new_head in snake_blocks:
+            new_head = SnakeBlock(snake.head.x + snake.delta_column, snake.head.y + snake.delta_line)
+            if new_head in snake.blocks:
                 break
-            snake_blocks.append(new_head)
-            snake_blocks.pop(0)
+            snake.movement(new_head)
 
-            pygame.display.flip()  # we apply everything that we have drawn on the screen
-            timer.tick(4 + speed)
+            PlayingField.apply_everything_plus_time(snake.speed)
 
-        records.update_list_all_players(total_record)
+        snake.records.update_list_all_players(snake.total_record)
 
     @staticmethod
     def medium_play_level():
@@ -220,89 +250,48 @@ class SnakeLevels:
             x = random.randint(0, COUNT_BLOCKS - 1)
             y = random.randint(0, COUNT_BLOCKS - 1)
             empty_block = SnakeBlock(x, y)
-            while (empty_block in snake_blocks) or (empty_block in stone_blocks):
+            while (empty_block in snake.blocks) or (empty_block in stone_blocks):
                 empty_block.x = random.randint(0, COUNT_BLOCKS - 1)
                 empty_block.y = random.randint(0, COUNT_BLOCKS - 1)
             return empty_block
 
-        x0 = random.randint(0, COUNT_BLOCKS - 5)
-        y0 = random.randint(0, COUNT_BLOCKS - 1)
-
-        snake_blocks = [SnakeBlock(x0, y0), SnakeBlock(x0 + 1, y0), SnakeBlock(x0 + 2, y0)]  # a head is last
+        snake = DrawingSnake("records2.txt")
         stone_blocks = []
         stone = get_empty_random_block()
         stone_blocks.append(stone)
         apple = get_empty_random_block()
-        stone = get_empty_random_block()
-        d_line = 0
-        d_col = 1
-        speed = 0
-        total = 0
-        records = Records("records2.txt")
-        total_record = records.of_the_player()
         while True:
-            for event in pygame.event.get():  # doing all events
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                elif event.type == pygame.KEYDOWN:
-                    if (event.key == pygame.K_w or event.key == pygame.K_UP) and d_col != 0:
-                        d_line = -1
-                        d_col = 0
-                    elif (event.key == pygame.K_s or event.key == pygame.K_DOWN) and d_col != 0:
-                        d_line = 1
-                        d_col = 0
-                    elif (event.key == pygame.K_a or event.key == pygame.K_LEFT) and d_line != 0:
-                        d_line = 0
-                        d_col = -1
-                    elif (event.key == pygame.K_d or event.key == pygame.K_RIGHT) and d_line != 0:
-                        d_line = 0
-                        d_col = 1
+            PlayingField.drawing(snake.total, snake.total_record, HEADER_COLOR, HEADER_MARGIN, (WHITE, BLUE))
+            snake.delta_column, snake.delta_line = PlayingField.doing_events(snake.delta_column, snake.delta_line)
 
-            screen.fill(FRAME_WORK)
-            pygame.draw.rect(screen, HEADER_COLOR, [0, 0, size[0], HEADER_MARGIN])
-
-            text_total = courier.render(f"Total: {total}", False, WHITE)
-            text_record = courier.render(f"Record: {total_record}", False, WHITE)
-            screen.blit(text_total, (SIZE_BLOCK, SIZE_BLOCK))
-            screen.blit(text_record, (SIZE_BLOCK + 210, SIZE_BLOCK))
-            for line in range(COUNT_BLOCKS):
-                for column in range(COUNT_BLOCKS):
-                    if (line + column) % 2 == 0:
-                        color = WHITE
-                    else:
-                        color = BLUE
-                    draw_block(color, column, line)
-
-            head = snake_blocks[-1]
-            if not head.is_inside():
+            snake.head = snake.blocks[-1]
+            if not snake.head.is_inside():
                 break
 
             draw_block(RED, apple.x, apple.y)
             for stones in stone_blocks:
                 draw_block(STONE_COLOR, stones.x, stones.y)
-            for block in snake_blocks:
-                draw_block(SNAKE_COLOR, block.x, block.y)
-            if apple == head:
-                total += 1
-                total_record = records.update_of_the_player(total, total_record)
-                speed = total // 2
-                snake_blocks.append(apple)
+            # for block in snake.blocks:
+            #     draw_block(SNAKE_COLOR, block.x, block.y)
+            snake.drawing(SNAKE_COLOR)
+            if apple == snake.head:
+                snake.total += 1
+                snake.total_record = snake.records.update_of_the_player(snake.total, snake.total_record)
+                speed = snake.total // 2
+                snake.blocks.append(apple)
                 apple = get_empty_random_block()
                 stone = get_empty_random_block()
                 stone_blocks.append(stone)
-            if head in stone_blocks:
+            if snake.head in stone_blocks:
                 break
-            new_head = SnakeBlock(head.x + d_col, head.y + d_line)
-            if new_head in snake_blocks:
+            new_head = SnakeBlock(snake.head.x + snake.delta_column, snake.head.y + snake.delta_line)
+            if new_head in snake.blocks:
                 break
-            snake_blocks.append(new_head)
-            snake_blocks.pop(0)
+            snake.movement(new_head)
 
-            pygame.display.flip()  # we apply everything that we have drawn on the screen
-            timer.tick(4 + speed)
+            PlayingField.apply_everything_plus_time(snake.speed)
 
-        records.update_list_all_players(total_record)
+        snake.records.update_list_all_players(snake.total_record)
 
     @staticmethod
     def hard_play_level():
@@ -312,245 +301,70 @@ class SnakeLevels:
             x = random.randint(0, COUNT_BLOCKS - 1)
             y = random.randint(0, COUNT_BLOCKS - 1)
             empty_block = SnakeBlock(x, y)
-            while empty_block in snake_blocks:
+            while (empty_block in snake.blocks) or (empty_block in stone_blocks):
                 empty_block.x = random.randint(0, COUNT_BLOCKS - 1)
                 empty_block.y = random.randint(0, COUNT_BLOCKS - 1)
             return empty_block
 
-        def check_bad_new_block(x, y):
-            flag = 1
-            empty_copy = SnakeBlock(x, y)
-            moves = [(-1, 0), (0, 1), (1, 0), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1)]
-            for delta in moves:
-                empty_copy.x += delta[0]
-                empty_copy.y += delta[1]
-                if not empty_copy.is_inside():
-                    flag = 0
-                empty_copy.x -= delta[0]
-                empty_copy.y -= delta[1]
-            if empty_copy in snake_blocks:
-                flag = 0
-            return flag
-
-        def head_empty_random_block(head_x, head_y):
-            move = [(-1, 0), (-1, 0), (0, 1), (0, 1), (1, 0), (1, 0), (0, -1), (0, -1),
-                    (-1, 0), (-1, 0), (0, 1), (0, 1), (1, 0), (1, 0), (0, -1), (0, -1)]
-            dx, dy = random.choice(move)
-            x, y = dx + head_x, dy + head_y
-            while not check_bad_new_block(x, y):
-                dx, dy = random.choice(move)
-                x, y = dx + head_x, dy + head_y
-            empty_block = SnakeBlock(x, y)
-            return empty_block
-
-        x0 = random.randint(0, COUNT_BLOCKS - 5)
-        y0 = random.randint(0, COUNT_BLOCKS - 1)
-
-        snake_blocks = [SnakeBlock(x0, y0), SnakeBlock(x0 + 1, y0), SnakeBlock(x0 + 2, y0)]  # a head is last
-        bad_snake_block = get_empty_random_block()
-        bad_snake_blocks = [bad_snake_block]
+        stone_blocks = []
+        snake = DrawingSnake("records3.txt")
+        stone = get_empty_random_block()
+        stone_blocks.append(stone)
 
         apple = get_empty_random_block()
-        movement = dict(up=(-1, 0), down=(1, 0), left=(0, -1), right=(0, 1))
-        d_line = 0
-        d_col = 1
-        speed = 0
-        total = 0
-        records = Records("records3.txt")
-        total_record = records.of_the_player()
         while True:
-            for event in pygame.event.get():  # doing all events
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                elif event.type == pygame.KEYDOWN:
-                    if (event.key == pygame.K_w or event.key == pygame.K_UP) and d_col != 0:
-                        d_line, d_col = movement['up']
-                    elif (event.key == pygame.K_s or event.key == pygame.K_DOWN) and d_col != 0:
-                        d_line, d_col = movement['down']
-                    elif (event.key == pygame.K_a or event.key == pygame.K_LEFT) and d_line != 0:
-                        d_line, d_col = movement['left']
-                    elif (event.key == pygame.K_d or event.key == pygame.K_RIGHT) and d_line != 0:
-                        d_line, d_col = movement['right']
+            PlayingField.drawing(snake.total, snake.total_record, HEADER_COLOR, HEADER_MARGIN, (WHITE, BLUE))
+            snake.delta_column, snake.delta_line = PlayingField.doing_events(snake.delta_column, snake.delta_line)
 
-            screen.fill(FRAME_WORK)
-            pygame.draw.rect(screen, HEADER_COLOR, [0, 0, size[0], HEADER_MARGIN])
-
-            text_total = courier.render(f"Total: {total}", False, WHITE)
-            text_record = courier.render(f"Record: {total_record}", False, WHITE)
-            screen.blit(text_total, (SIZE_BLOCK, SIZE_BLOCK))
-            screen.blit(text_record, (SIZE_BLOCK + 210, SIZE_BLOCK))
-            for line in range(COUNT_BLOCKS):
-                for column in range(COUNT_BLOCKS):
-                    if (line + column) % 2 == 0:
-                        color = WHITE
-                    else:
-                        color = BLUE
-                    draw_block(color, column, line)
-            head_bad = bad_snake_blocks[-1]
-            head = snake_blocks[-1]
-            if not head.is_inside():
+            snake.head = snake.blocks[-1]
+            if not snake.head.is_inside():
                 break
 
             draw_block(RED, apple.x, apple.y)
-            # for stones in stone_blocks:
-            #     draw_block(STONE_COLOR, stones.x, stones.y)
-            for block in snake_blocks:
-                draw_block(SNAKE_COLOR, block.x, block.y)
-            for block_bad in bad_snake_blocks:
-                draw_block(BAD_SNAKE_COLOR, block_bad.x, block_bad.y)
-            if apple == head:
-                total += 1
-                total_record = records.update_of_the_player(total, total_record)
-                speed = total // 2
-                snake_blocks.append(apple)
-                bad_snake_blocks.append(head_bad)
+            for block in stone_blocks:
+                coord = [(-1, 0), (0, 1), (1, 0), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1), (0, 0)]
+                delta = random.choice(coord)
+                block.x += delta[0]
+                block.y += delta[1]
+                while (not block.is_inside()) or (block in snake.blocks):
+                    block.x -= delta[0]
+                    block.y -= delta[1]
+                    delta = random.choice(coord)
+                    block.x += delta[0]
+                    block.y += delta[1]
+                draw_block(STONE_COLOR, block.x, block.y)
+            snake.drawing(SNAKE_COLOR)
+            if apple == snake.head:
+                snake.total += 1
+                snake.total_record = snake.records.update_of_the_player(snake.total, snake.total_record)
+                snake.speed = snake.total // 2
+                snake.blocks.append(apple)
                 apple = get_empty_random_block()
+                stone_block = get_empty_random_block()
+                stone_blocks.append(stone_block)
 
-            new_head = SnakeBlock(head.x + d_col, head.y + d_line)
-            bad_new_head = head_empty_random_block(head_bad.x, head_bad.y)
+            new_head = SnakeBlock(snake.head.x + snake.delta_column, snake.head.y + snake.delta_line)
 
-            if (new_head in snake_blocks) or (new_head in bad_snake_blocks) or (head in bad_snake_blocks):
+            if (new_head in snake.blocks) or (new_head in stone_blocks) or (snake.head in stone_blocks):
                 break
-            snake_blocks.append(new_head)
-            bad_snake_blocks.append(bad_new_head)
-            snake_blocks.pop(0)
-            bad_snake_blocks.pop(0)
+            snake.blocks.append(new_head)
+            snake.blocks.pop(0)
 
-            pygame.display.flip()  # we apply everything that we have drawn on the screen
-            timer.tick(4 + speed)
+            PlayingField.apply_everything_plus_time(snake.speed)
 
-        records.update_list_all_players(total_record)
+        snake.records.update_list_all_players(snake.total_record)
 
 
 def start_the_game():
     global difficulty_of_game
     level = difficulty_of_game
-    snake = SnakeLevels()
+    snake_levels = SnakeLevels()
     if level == 1:
-        snake.easy_play_level()
+        snake_levels.easy_play_level()
     elif level == 2:
-        snake.medium_play_level()
+        snake_levels.medium_play_level()
     elif level == 3:
-        snake.hard_play_level()
-
-    # global name
-    #
-    # def get_empty_random_block():
-    #     x = random.randint(0, COUNT_BLOCKS - 1)
-    #     y = random.randint(0, COUNT_BLOCKS - 1)
-    #     empty_block = SnakeBlock(x, y)
-    #     while empty_block in snake_blocks:
-    #         empty_block.x = random.randint(0, COUNT_BLOCKS - 1)
-    #         empty_block.y = random.randint(0, COUNT_BLOCKS - 1)
-    #     return empty_block
-    #
-    # x0 = random.randint(0, COUNT_BLOCKS - 5)
-    # y0 = random.randint(0, COUNT_BLOCKS - 1)
-    #
-    # snake_blocks = [SnakeBlock(x0, y0), SnakeBlock(x0 + 1, y0), SnakeBlock(x0 + 2, y0)]  # a head is last
-    # apple = get_empty_random_block()
-    # d_line = 0
-    # d_col = 1
-    # speed = 0
-    # total = 0
-    # records = Records("records1.txt")
-    # total_record = records.of_the_player()
-    # # all_record_lines = []
-    # # r_file_of_records = open("records1.txt", "r")
-    # # all_records_lines = r_file_of_records.readlines()
-    # # all_to_read = '\n'.join(all_records_lines)
-    # # r_file_of_records.close()
-    # # if all_to_read.find('/' + name + '/') == -1:
-    # #     print('all_to_read', all_to_read)
-    # #     total_record = 0
-    # #     all_records_lines.append(f'/{total_record}/{name}/\n')
-    # # else:
-    # #     for lines in all_records_lines:
-    # #         if lines.find('/' + name + '/') != -1:
-    # #             total_record = int(lines.split('/')[1])
-    # #             break
-    # # player_records = [total_record, name]
-    # while True:
-    #     for event in pygame.event.get():  # doing all events
-    #         if event.type == pygame.QUIT:
-    #             pygame.quit()
-    #             sys.exit()
-    #         elif event.type == pygame.KEYDOWN:
-    #             if (event.key == pygame.K_w or event.key == pygame.K_UP) and d_col != 0:
-    #                 d_line = -1
-    #                 d_col = 0
-    #             elif (event.key == pygame.K_s or event.key == pygame.K_DOWN) and d_col != 0:
-    #                 d_line = 1
-    #                 d_col = 0
-    #             elif (event.key == pygame.K_a or event.key == pygame.K_LEFT) and d_line != 0:
-    #                 d_line = 0
-    #                 d_col = -1
-    #             elif (event.key == pygame.K_d or event.key == pygame.K_RIGHT) and d_line != 0:
-    #                 d_line = 0
-    #                 d_col = 1
-    #
-    #     screen.fill(FRAME_WORK)
-    #     pygame.draw.rect(screen, HEADER_COLOR, [0, 0, size[0], HEADER_MARGIN])
-    #
-    #     text_total = courier.render(f"Total: {total}", False, WHITE)
-    #     text_record = courier.render(f"Record: {total_record}", False, WHITE)
-    #     screen.blit(text_total, (SIZE_BLOCK, SIZE_BLOCK))
-    #     screen.blit(text_record, (SIZE_BLOCK + 210, SIZE_BLOCK))
-    #     for line in range(COUNT_BLOCKS):
-    #         for column in range(COUNT_BLOCKS):
-    #             if (line + column) % 2 == 0:
-    #                 color = WHITE
-    #             else:
-    #                 color = BLUE
-    #             draw_block(color, column, line)
-    #
-    #     head = snake_blocks[-1]
-    #     if not head.is_inside():
-    #         break
-    #
-    #     draw_block(RED, apple.x, apple.y)
-    #     for block in snake_blocks:
-    #         draw_block(SNAKE_COLOR, block.x, block.y)
-    #     if apple == head:
-    #         total += 1
-    #         total_record = records.update_of_the_player(total, total_record)
-    #         # if total > total_record:
-    #         #     flag = True
-    #         #     total_record = total
-    #         speed = total // 2
-    #         snake_blocks.append(apple)
-    #         apple = get_empty_random_block()
-    #
-    #     new_head = SnakeBlock(head.x + d_col, head.y + d_line)
-    #     if new_head in snake_blocks:
-    #         break
-    #     snake_blocks.append(new_head)
-    #     snake_blocks.pop(0)
-    #
-    #     pygame.display.flip()  # we apply everything that we have drawn on the screen
-    #     timer.tick(4 + speed)
-    #
-    # records.update_list_all_players(total_record)
-    # # def res_key(line_):
-    # #     list_line = line_.split('/')
-    # #     print(list_line)
-    # #     return int(list_line[1])
-    # # if flag:
-    # #     lol_flag = 1
-    # #
-    # #     for lines in range(len(all_records_lines)):
-    # #         if all_records_lines[lines].find(name) != -1 and lol_flag != -1:
-    # #             all_records_lines[lines] = f'/{total_record}/{name}/\n'
-    # #             print('all_record_lines', all_records_lines)
-    # #             lol_flag = -1
-    # #
-    # #     all_records_lines.sort(reverse=True, key=res_key)
-    # #     w_file_of_records = open("records1.txt", "w")
-    # #     for lines in all_records_lines:
-    # #         print(lines)
-    # #         w_file_of_records.write(lines)
-    # #     w_file_of_records.close()
+        snake_levels.hard_play_level()
 
 
 def file_of_difficult(difficult):
